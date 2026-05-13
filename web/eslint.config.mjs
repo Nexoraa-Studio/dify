@@ -56,7 +56,6 @@ export default antfu(
   {
     files: [...GLOB_TESTS, GLOB_MARKDOWN_CODE, 'vitest.setup.ts', 'test/i18n-mock.ts'],
     rules: {
-      'react/component-hook-factories': 'off',
       'react/no-unnecessary-use-prefix': 'off',
     },
   },
@@ -155,12 +154,6 @@ export default antfu(
       'hyoban/i18n-flat-key': 'error',
       'dify/no-extra-keys': 'error',
       'dify/consistent-placeholders': 'error',
-    },
-  },
-  {
-    files: ['package.json'],
-    rules: {
-      'hyoban/no-dependency-version-prefix': 'error',
     },
   },
   {
