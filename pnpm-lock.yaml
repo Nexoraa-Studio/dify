@@ -537,6 +537,9 @@ catalogs:
     uuid:
       specifier: 14.0.0
       version: 14.0.0
+    vinext:
+      specifier: 0.0.49
+      version: 0.0.49
     vite-plugin-inspect:
       specifier: 12.0.0-beta.1
       version: 12.0.0-beta.1
@@ -1181,9 +1184,6 @@ importers:
       uuid:
         specifier: 'catalog:'
         version: 14.0.0
-      vinext:
-        specifier: https://pkg.pr.new/vinext@1141
-        version: https://pkg.pr.new/vinext@1141(@mdx-js/rollup@3.1.1)(@vitejs/plugin-react@6.0.1(@voidzero-dev/vite-plus-core@0.1.20(@types/node@25.6.2)(esbuild@0.27.2)(jiti@2.7.0)(tsx@4.21.0)(typescript@6.0.3)(yaml@2.8.3)))(@vitejs/plugin-rsc@0.5.26(@voidzero-dev/vite-plus-core@0.1.20(@types/node@25.6.2)(esbuild@0.27.2)(jiti@2.7.0)(tsx@4.21.0)(typescript@6.0.3)(yaml@2.8.3))(react-dom@19.2.6(react@19.2.6))(react-server-dom-webpack@19.2.6(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(react@19.2.6))(@voidzero-dev/vite-plus-core@0.1.20(@types/node@25.6.2)(esbuild@0.27.2)(jiti@2.7.0)(tsx@4.21.0)(typescript@6.0.3)(yaml@2.8.3))(next@16.2.6(@babel/core@7.29.0)(@playwright/test@1.59.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(react-dom@19.2.6(react@19.2.6))(react-server-dom-webpack@19.2.6(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(react@19.2.6)(typescript@6.0.3)
       zod:
         specifier: 'catalog:'
         version: 4.4.3
@@ -8111,9 +8111,8 @@ packages:
   vfile@6.0.3:
     resolution: {integrity: sha512-KzIbH/9tXat2u30jf+smMwFCsno4wHVdNmzFyL+T/L3UGqqk6JKfVqOFOZEpZSHADH1k40ab6NUIXZq422ov3Q==}
 
-  vinext@https://pkg.pr.new/vinext@1141:
-    resolution: {integrity: sha512-b0La4CaZ34X9vPocWPwDj9A1QO1V+lkub25sgUe86/gR9JeQEwHqw+BJF7rDhWVyH3U4GVasNiJRslEWTKUkaA==, tarball: https://pkg.pr.new/vinext@1141}
-    version: 0.0.5
+  vinext@0.0.49:
+    resolution: {integrity: sha512-FD8JbaElijIfI1aWDo52c6r6/6k2ayuY5TwDqjAd10XEzHDMARLRukIFywqKKKliLEN4p9G0HU/TlJJ4umF5dw==}
     engines: {node: '>=22'}
     hasBin: true
     peerDependencies:
@@ -16361,6 +16360,7 @@ time:
   unist-util-visit@5.1.0: '2026-01-22T19:02:58.977Z'
   use-context-selector@2.0.0: '2024-05-06T11:23:59.259Z'
   uuid@14.0.0: '2026-04-19T15:15:42.302Z'
+  vinext@0.0.49: '2026-05-06T20:21:33.910Z'
   vite-plugin-inspect@12.0.0-beta.1: '2026-03-24T10:42:21.306Z'
   vite-plus@0.1.20: '2026-04-29T03:08:50.317Z'
   vitest-browser-react@2.2.0: '2026-04-05T06:56:34.635Z'
