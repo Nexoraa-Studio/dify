@@ -148,7 +148,6 @@
     "unist-util-visit": "catalog:",
     "use-context-selector": "catalog:",
     "uuid": "catalog:",
-    "vinext": "https://pkg.pr.new/vinext@1141",
     "zod": "catalog:",
     "zundo": "catalog:",
     "zustand": "catalog:"
@@ -223,6 +222,7 @@
     "tsx": "catalog:",
     "typescript": "catalog:",
     "uglify-js": "catalog:",
+    "vinext": "catalog:",
     "vite": "catalog:",
     "vite-plugin-inspect": "catalog:",
     "vite-plus": "catalog:",
