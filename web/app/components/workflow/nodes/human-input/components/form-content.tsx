@@ -14,6 +14,7 @@ import { INSERT_HITL_INPUT_BLOCK_COMMAND } from '@/app/components/base/prompt-ed
 import { useWorkflowVariableType } from '../../../hooks'
 import { BlockEnum } from '../../../types'
 import { isMac } from '../../../utils'
+import { getNodeDimensions } from '../../../utils/node'
 import AddInputField from './add-input-field'
 
 type FormContentProps = {
@@ -98,11 +99,12 @@ const FormContent: FC<FormContentProps> = ({
   }] = useBoolean(false)
 
   const workflowNodesMap = availableNodes.reduce<WorkflowNodesMap>((acc, node) => {
+    const { width, height } = getNodeDimensions(node)
     acc[node.id] = {
       title: node.data.title,
       type: node.data.type,
-      width: node.width ?? undefined,
-      height: node.height ?? undefined,
+      width,
+      height,
       position: node.position,
     }
     if (node.data.type === BlockEnum.Start) {

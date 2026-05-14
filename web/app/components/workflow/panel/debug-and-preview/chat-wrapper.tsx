@@ -3,12 +3,18 @@ import type { ChatWrapperRefType } from './index'
 import type { HumanInputFormSubmitData } from '@/app/components/base/chat/chat/answer/human-input-content/type'
 import type { ChatItem, OnSend } from '@/app/components/base/chat/types'
 import type { FileEntity } from '@/app/components/base/file-uploader/types'
-import { memo, useCallback, useEffect, useImperativeHandle, useMemo } from 'react'
-import { useNodes } from 'reactflow'
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+} from 'react'
 import { useStore as useAppStore } from '@/app/components/app/store'
 import Chat from '@/app/components/base/chat/chat'
 import { getLastAnswer, isValidGeneratedAnswer } from '@/app/components/base/chat/utils'
 import { useFeatures } from '@/app/components/base/features/hooks'
+import { useWorkflowFlowNodes } from '@/app/components/workflow/hooks/use-workflow-reactflow'
 import { EVENT_WORKFLOW_STOP } from '@/app/components/workflow/variable-inspect/types'
 import { useEventEmitterContextContext } from '@/context/event-emitter'
 import {
@@ -43,7 +49,7 @@ const ChatWrapper = (
     ref: React.RefObject<ChatWrapperRefType>
   },
 ) => {
-  const nodes = useNodes<StartNodeType>()
+  const nodes = useWorkflowFlowNodes<StartNodeType>()
   const startNode = nodes.find(node => node.data.type === BlockEnum.Start)
   const startVariables = startNode?.data.variables
   const appDetail = useAppStore(s => s.appDetail)

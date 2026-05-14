@@ -13,9 +13,9 @@ import {
   useMemo,
 } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useStoreApi } from 'reactflow'
 import { useStore as useAppStore } from '@/app/components/app/store'
 import Badge from '@/app/components/base/badge'
+import { useWorkflowStoreApi } from '@/app/components/workflow/hooks/use-workflow-reactflow'
 import { filterEvaluationWorkflowRestrictedBlockTypes, isEvaluationWorkflow } from '@/app/components/workflow/utils/evaluation-workflow'
 import BlockIcon from '../block-icon'
 import { BlockEnum } from '../types'
@@ -39,7 +39,7 @@ const Blocks = ({
   blocks: blocksFromProps,
 }: BlocksProps) => {
   const { t } = useTranslation()
-  const store = useStoreApi()
+  const store = useWorkflowStoreApi()
   const appType = useAppStore(s => s.appDetail?.workflow_kind)
   const blocksFromHooks = useBlocks()
   const filteredAvailableBlocksTypes = useMemo(() => {
@@ -89,8 +89,7 @@ const Blocks = ({
 
   const renderGroup = useCallback((classification: BlockClassificationEnum) => {
     const list = groups[classification]!.sort((a, b) => (a.metaData.sort || 0) - (b.metaData.sort || 0))
-    const { getNodes } = store.getState()
-    const nodes = getNodes()
+    const { nodes } = store.getState()
     const hasKnowledgeBaseNode = nodes.some(node => node.data.type === BlockEnum.KnowledgeBase)
     const filteredList = list.filter((block) => {
       if (hasKnowledgeBaseNode)

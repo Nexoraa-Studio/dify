@@ -3,11 +3,11 @@ import { toast } from '@langgenius/dify-ui/toast'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useStoreApi } from 'reactflow'
 import { consoleQuery } from '@/service/client'
 import { useIncrementSnippetUseCountMutation } from '@/service/use-snippets'
 import { CUSTOM_EDGE, ITERATION_CHILDREN_Z_INDEX, LOOP_CHILDREN_Z_INDEX, NODE_WIDTH_X_OFFSET, X_OFFSET } from '../../constants'
 import { useNodesSyncDraft, useWorkflowHistory, WorkflowHistoryEvent } from '../../hooks'
+import { useWorkflowStoreApi } from '../../hooks/use-workflow-reactflow'
 import { BlockEnum } from '../../types'
 import { getNodesConnectedSourceOrTargetHandleIdsMap } from '../../utils'
 
@@ -276,7 +276,7 @@ const createBoundaryEdges = ({
 export const useInsertSnippet = () => {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
-  const store = useStoreApi()
+  const store = useWorkflowStoreApi()
   const { handleSyncWorkflowDraft } = useNodesSyncDraft()
   const { saveStateToHistory } = useWorkflowHistory()
   const { mutate: incrementSnippetUseCount } = useIncrementSnippetUseCountMutation()
@@ -293,8 +293,8 @@ export const useInsertSnippet = () => {
       if (!snippetNodes.length)
         return
 
-      const { getNodes, setNodes, edges, setEdges } = store.getState()
-      const currentNodes = getNodes()
+      const { nodes, setNodes, edges, setEdges } = store.getState()
+      const currentNodes = nodes
       const remappedGraph = remapSnippetGraph(currentNodes, snippetNodes, snippetEdges, insertPayload)
       const parentNode = getParentNode(currentNodes, insertPayload)
       const rootNodeIds = new Set(getRootNodes(remappedGraph.nodes).map(node => node.id))

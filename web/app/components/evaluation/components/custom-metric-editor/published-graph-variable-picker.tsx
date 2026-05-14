@@ -8,8 +8,8 @@ import type {
   Node,
   ValueSelector,
 } from '@/app/components/workflow/types'
+import { ReactFlow, ReactFlowProvider } from '@xyflow/react'
 import { useMemo } from 'react'
-import ReactFlow, { ReactFlowProvider } from 'reactflow'
 import { WorkflowContext } from '@/app/components/workflow/context'
 import { createHooksStore, HooksStoreContext } from '@/app/components/workflow/hooks-store'
 import VarReferencePicker from '@/app/components/workflow/nodes/_base/components/variable/var-reference-picker'

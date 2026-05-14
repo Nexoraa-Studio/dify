@@ -4,7 +4,6 @@ import { PipelineInputVarType } from '@/models/pipeline'
 import { useSnippetDetailStore } from '../../store'
 import { useNodesSyncDraft } from '../use-nodes-sync-draft'
 
-const mockGetNodes = vi.fn()
 const mockGetNodesReadOnly = vi.fn()
 const mockPostWithKeepalive = vi.fn()
 const mockSyncDraftWorkflow = vi.fn()
@@ -14,7 +13,7 @@ let deferSerialCallbacks = false
 let queuedSerialCallbacks: Array<() => Promise<void> | void> = []
 
 let reactFlowState: {
-  getNodes: typeof mockGetNodes
+  nodes: Array<Record<string, unknown>>
   edges: Array<Record<string, unknown>>
   transform: [number, number, number]
 }
@@ -25,8 +24,8 @@ let workflowStoreState: {
   setSyncWorkflowDraftHash: typeof mockSetSyncWorkflowDraftHash
 }
 
-vi.mock('reactflow', () => ({
-  useStoreApi: () => ({ getState: () => reactFlowState }),
+vi.mock('@/app/components/workflow/hooks/use-workflow-reactflow', () => ({
+  useWorkflowStoreApi: () => ({ getState: () => reactFlowState }),
 }))
 
 vi.mock('@/app/components/workflow/hooks/use-workflow', () => ({
@@ -87,7 +86,9 @@ describe('snippet/use-nodes-sync-draft', () => {
     deferSerialCallbacks = false
     queuedSerialCallbacks = []
     reactFlowState = {
-      getNodes: mockGetNodes,
+      nodes: [
+        { id: 'node-1', position: { x: 0, y: 0 }, data: { title: 'Start', _temp: 'drop' } },
+      ],
       edges: [{ id: 'edge-1', source: 'node-1', target: 'node-2', data: { stable: true } }],
       transform: [12, 24, 1.5],
     }
@@ -97,9 +98,6 @@ describe('snippet/use-nodes-sync-draft', () => {
       setSyncWorkflowDraftHash: mockSetSyncWorkflowDraftHash,
     }
     mockGetNodesReadOnly.mockReturnValue(false)
-    mockGetNodes.mockReturnValue([
-      { id: 'node-1', position: { x: 0, y: 0 }, data: { title: 'Start', _temp: 'drop' } },
-    ])
     mockSyncDraftWorkflow.mockResolvedValue({
       hash: 'next-hash',
       updated_at: 123,
@@ -138,9 +136,9 @@ describe('snippet/use-nodes-sync-draft', () => {
       await result.current.doSyncWorkflowDraft()
     })
 
-    mockGetNodes.mockReturnValue([
+    reactFlowState.nodes = [
       { id: 'late-node', position: { x: 9, y: 9 }, data: { title: 'Late' } },
-    ])
+    ]
     reactFlowState.edges = [{ id: 'late-edge', source: 'late-node', target: 'late-target', data: { stable: false } }]
     reactFlowState.transform = [99, 88, 0.5]
 

@@ -1,4 +1,4 @@
-import type { Viewport } from 'reactflow'
+import type { Viewport } from '@xyflow/react'
 import type { Edge, Node } from '@/app/components/workflow/types'
 import type { InputVar } from '@/models/pipeline'
 

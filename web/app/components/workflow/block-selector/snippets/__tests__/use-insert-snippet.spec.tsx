@@ -38,10 +38,10 @@ vi.mock('@tanstack/react-query', () => ({
   }),
 }))
 
-vi.mock('reactflow', () => ({
-  useStoreApi: () => ({
+vi.mock('../../../hooks/use-workflow-reactflow', () => ({
+  useWorkflowStoreApi: () => ({
     getState: () => ({
-      getNodes: mockGetNodes,
+      nodes: mockGetNodes(),
       setNodes: mockSetNodes,
       edges: mockEdges,
       setEdges: mockSetEdges,
