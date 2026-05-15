@@ -35,7 +35,11 @@ fi
 
 tmp_output="$(mktemp)"
 set +e
-uv run --directory api --dev pyrefly check "${pyrefly_args[@]}" "${target_paths[@]}" >"$tmp_output" 2>&1
+if [[ ${#target_paths[@]} -gt 0 ]]; then
+  uv run --directory api --dev pyrefly check "${pyrefly_args[@]}" "${target_paths[@]}" >"$tmp_output" 2>&1
+else
+  uv run --directory api --dev pyrefly check "${pyrefly_args[@]}" >"$tmp_output" 2>&1
+fi
 pyrefly_status=$?
 set -e
 
