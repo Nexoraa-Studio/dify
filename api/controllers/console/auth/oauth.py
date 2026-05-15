@@ -13,8 +13,11 @@ from extensions.ext_database import db
 from libs.datetime_utils import naive_utc_now
 from libs.helper import extract_remote_ip
 from libs.helper import timezone as validate_timezone_string
-from libs.oauth import GitHubOAuth, GoogleOAuth, OAuthUserInfo, decode_oauth_state
+from libs.oauth import GitHubOAuth, GoogleOAuth, OAuthState, OAuthUserInfo, decode_oauth_state, encode_oauth_state
 from libs.token import (
+    _cookie_domain,
+    _real_cookie_name,
+    is_secure,
     set_access_token_to_cookie,
     set_csrf_token_to_cookie,
     set_refresh_token_to_cookie,
@@ -29,6 +32,50 @@ from services.feature_service import FeatureService
 from .. import console_ns
 
 logger = logging.getLogger(__name__)
+
+OAUTH_INIT_STATE_COOKIE_NAME = "oauth_init_state"
+OAUTH_INIT_STATE_COOKIE_MAX_AGE_SECONDS = 10 * 60
+
+
+def _clear_oauth_init_state_cookie(response) -> None:
+    response.set_cookie(
+        _real_cookie_name(OAUTH_INIT_STATE_COOKIE_NAME),
+        "",
+        expires=0,
+        httponly=True,
+        domain=_cookie_domain(),
+        secure=is_secure(),
+        samesite="Lax",
+        path="/",
+    )
+
+
+def _set_oauth_init_state_cookie(response, timezone: str | None, language: str | None) -> None:
+    state = encode_oauth_state(timezone=timezone, language=language)
+    if not state:
+        _clear_oauth_init_state_cookie(response)
+        return
+
+    response.set_cookie(
+        _real_cookie_name(OAUTH_INIT_STATE_COOKIE_NAME),
+        value=state,
+        httponly=True,
+        domain=_cookie_domain(),
+        secure=is_secure(),
+        samesite="Lax",
+        max_age=OAUTH_INIT_STATE_COOKIE_MAX_AGE_SECONDS,
+        path="/",
+    )
+
+
+def _get_oauth_init_state_from_cookie() -> OAuthState:
+    return decode_oauth_state(request.cookies.get(_real_cookie_name(OAUTH_INIT_STATE_COOKIE_NAME)))
+
+
+def _redirect_with_cleared_oauth_init_state(location: str):
+    response = redirect(location)
+    _clear_oauth_init_state_cookie(response)
+    return response
 
 
 def get_oauth_providers():
@@ -103,7 +150,9 @@ class OAuthLogin(Resource):
             timezone=timezone,
             language=language,
         )
-        return redirect(auth_url)
+        response = redirect(auth_url)
+        _set_oauth_init_state_cookie(response, timezone=timezone, language=language)
+        return response
 
 
 @console_ns.route("/oauth/authorize/<provider>")
@@ -129,9 +178,10 @@ class OAuthCallback(Resource):
         code = request.args.get("code")
         state = request.args.get("state")
         oauth_state = decode_oauth_state(state)
+        cookie_state = _get_oauth_init_state_from_cookie()
         invite_token = oauth_state.get("invite_token")
-        timezone = _validated_timezone(oauth_state.get("timezone"))
-        language = _validated_language(oauth_state.get("language"))
+        timezone = _validated_timezone(oauth_state.get("timezone") or cookie_state.get("timezone"))
+        language = _validated_language(oauth_state.get("language") or cookie_state.get("language"))
 
         if not code:
             return {"error": "Authorization code is required"}, 400
@@ -147,7 +197,9 @@ class OAuthCallback(Resource):
             return {"error": "OAuth process failed"}, 400
         except ValueError as e:
             logger.warning("OAuth error with %s", provider, exc_info=True)
-            return redirect(f"{dify_config.CONSOLE_WEB_URL}/signin?message={urllib.parse.quote(str(e))}")
+            return _redirect_with_cleared_oauth_init_state(
+                f"{dify_config.CONSOLE_WEB_URL}/signin?message={urllib.parse.quote(str(e))}"
+            )
 
         if invite_token and RegisterService.is_valid_invite_token(invite_token):
             invitation = RegisterService.get_invitation_by_token(token=invite_token)
@@ -157,25 +209,35 @@ class OAuthCallback(Resource):
                     invitation_email.lower() if isinstance(invitation_email, str) else invitation_email
                 )
                 if invitation_email_normalized != user_info.email.lower():
-                    return redirect(f"{dify_config.CONSOLE_WEB_URL}/signin?message=Invalid invitation token.")
+                    return _redirect_with_cleared_oauth_init_state(
+                        f"{dify_config.CONSOLE_WEB_URL}/signin?message=Invalid invitation token."
+                    )
 
-            return redirect(f"{dify_config.CONSOLE_WEB_URL}/signin/invite-settings?invite_token={invite_token}")
+            return _redirect_with_cleared_oauth_init_state(
+                f"{dify_config.CONSOLE_WEB_URL}/signin/invite-settings?invite_token={invite_token}"
+            )
 
         try:
             account, oauth_new_user = _generate_account(provider, user_info, timezone=timezone, language=language)
         except AccountNotFoundError:
-            return redirect(f"{dify_config.CONSOLE_WEB_URL}/signin?message=Account not found.")
+            return _redirect_with_cleared_oauth_init_state(
+                f"{dify_config.CONSOLE_WEB_URL}/signin?message=Account not found."
+            )
         except (WorkSpaceNotFoundError, WorkSpaceNotAllowedCreateError):
-            return redirect(
+            return _redirect_with_cleared_oauth_init_state(
                 f"{dify_config.CONSOLE_WEB_URL}/signin"
                 "?message=Workspace not found, please contact system admin to invite you to join in a workspace."
             )
         except AccountRegisterError as e:
-            return redirect(f"{dify_config.CONSOLE_WEB_URL}/signin?message={e.description}")
+            return _redirect_with_cleared_oauth_init_state(
+                f"{dify_config.CONSOLE_WEB_URL}/signin?message={e.description}"
+            )
 
         # Check account status
         if account.status == AccountStatus.BANNED:
-            return redirect(f"{dify_config.CONSOLE_WEB_URL}/signin?message=Account is banned.")
+            return _redirect_with_cleared_oauth_init_state(
+                f"{dify_config.CONSOLE_WEB_URL}/signin?message=Account is banned."
+            )
 
         if account.status == AccountStatus.PENDING:
             account.status = AccountStatus.ACTIVE
@@ -185,9 +247,11 @@ class OAuthCallback(Resource):
         try:
             TenantService.create_owner_tenant_if_not_exist(account)
         except Unauthorized:
-            return redirect(f"{dify_config.CONSOLE_WEB_URL}/signin?message=Workspace not found.")
+            return _redirect_with_cleared_oauth_init_state(
+                f"{dify_config.CONSOLE_WEB_URL}/signin?message=Workspace not found."
+            )
         except WorkSpaceNotAllowedCreateError:
-            return redirect(
+            return _redirect_with_cleared_oauth_init_state(
                 f"{dify_config.CONSOLE_WEB_URL}/signin"
                 "?message=Workspace not found, please contact system admin to invite you to join in a workspace."
             )
@@ -200,7 +264,7 @@ class OAuthCallback(Resource):
         base_url = dify_config.CONSOLE_WEB_URL
         query_char = "&" if "?" in base_url else "?"
         target_url = f"{base_url}{query_char}oauth_new_user={str(oauth_new_user).lower()}"
-        response = redirect(target_url)
+        response = _redirect_with_cleared_oauth_init_state(target_url)
 
         set_access_token_to_cookie(request, response, token_pair.access_token)
         set_refresh_token_to_cookie(request, response, token_pair.refresh_token)
