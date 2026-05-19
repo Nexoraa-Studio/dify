@@ -55,6 +55,7 @@ api/
     rating.py          ← rate() pure function — Narayana (ENG-27)
     anomaly.py         ← velocity cap check + spike detection — Nithilesh (ENG-28)
     enforcement.py     ← mode transition + audit — Dinesh (ENG-29)
+    margin_query.py    ← read-only margin aggregation — Dinesh (ENG-29)
     retry.py           ← free-retry policy + partial charging — Saahithi (ENG-30)
     reconciliation.py  ← vendor drift calculation — Saahithi (ENG-31)
   models/credits.py    ← all SQLAlchemy models (Phase 1 + Phase 2 tables)
@@ -129,11 +130,13 @@ class ResolvedWorkflowStatus:
 
 ```python
 def rate(
-    events: list[UsageEvent],
+    events: list[UsageEvent],           # settlement service pre-filters to billable=true
+                                        # and to occurred_at < failed_at when status=failed_charged
     rating_rule: RatingRule,
     cost_model: CostModel,
     overrides: list[RatingOverride],
     catalog_snapshot: CatalogSnapshot,
+    workflow_status: str = "full_success",  # set by retry.resolve_workflow_status() before call
 ) -> RatingDecision:
     model_type = rating_rule.model_type
     if model_type == "fixed":
@@ -143,9 +146,15 @@ def rate(
     elif model_type == "hybrid":
         return _rate_hybrid(events, rating_rule, cost_model, overrides, catalog_snapshot)
     elif model_type == "value_based":
-        return _rate_value_based(events, rating_rule, cost_model, overrides, catalog_snapshot)
+        return _rate_value_based(events, rating_rule, cost_model, overrides, catalog_snapshot, workflow_status)
     raise ValueError(f"Unknown model_type: {model_type}")
 ```
+
+**Settlement service caller contract (pre-call responsibilities):**
+1. Call `retry.resolve_workflow_status()` to get the effective `workflow_status`
+2. If `workflow_status = "failed_charged"`: filter `events` to `occurred_at < workflow_run.failed_at` before passing to `rate()`
+3. Pass the resolved `workflow_status` string as the final argument
+4. `rate()` itself never reads `workflow_run.failed_at` or any runtime state — ADR-0004 invariants preserved
 
 ### `hybrid` Model
 
@@ -171,15 +180,15 @@ MULTIPLIERS = {
     "failed_charged":     None,  # falls through to steps-completed calculation
 }
 
-def _rate_value_based(...) -> RatingDecision:
-    workflow_status = catalog_snapshot.workflow_status  # set by retry.py before rate() call
+def _rate_value_based(events, rating_rule, cost_model, overrides, catalog_snapshot, workflow_status) -> RatingDecision:
+    # workflow_status is passed explicitly by the settlement service (set by retry.resolve_workflow_status())
+    # events list is already pre-filtered to occurred_at < failed_at when status=failed_charged
     multiplier = MULTIPLIERS.get(workflow_status)
     if multiplier is not None:
         rated_credits = int(rating_rule.base_credits * multiplier)
     else:
-        # failed_charged: charge for events emitted before workflow.failed_at
-        billable = [e for e in events if e.occurred_at < catalog_snapshot.failed_at]
-        rated_credits = _rate_per_unit(billable, ...).rated_credits
+        # failed_charged: events already filtered by settlement service caller — rate normally
+        rated_credits = _rate_per_unit(events, ...).rated_credits
 ```
 
 ### Golden Fixtures
@@ -230,6 +239,8 @@ def check_velocity(tenant_id: str) -> VelocityCheckResult:
 
 **Known soft bound:** The 30s TTL means a burst can exceed the per-minute cap for up to 30s before the cache refreshes. This is intentional and acceptable for enterprise workflow cadences.
 
+**Cleanup:** A Celery beat task runs hourly and deletes `velocity_counters` rows older than 2 hours. This is safe because windows older than 1 hour can never be the current window. Add to `tasks/credits/anomaly_scan.py` alongside the spike detection task.
+
 ### Spike Detection — Celery Beat Every 5 Minutes
 
 `tasks/credits/anomaly_scan.py` processes all active tenants:
@@ -249,7 +260,7 @@ FROM (
 If `hourly_total > seven_day_avg * 10`:
 1. Emit CloudWatch metric `credits/anomaly_spike`
 2. Trigger SNS alert to on-call
-3. If `tenant.auto_suspend = true` AND `tenant.enforcement_mode != 'observe_only'`:
+3. If `tenants.auto_suspend = true` (boolean column on `tenants` table, default `false`) AND `tenants.enforcement_mode != 'observe_only'`:
    - Set `enforcement_mode = enforce_block`
    - Write `audit_log` entry: `reason="anomaly_auto_suspend"`, actor=`"system"`
    - Emit `tenant.suspended` internal event
