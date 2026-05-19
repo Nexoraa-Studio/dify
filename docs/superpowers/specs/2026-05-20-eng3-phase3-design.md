@@ -131,7 +131,7 @@ class PortalUsageSummary:
 class PortalWorkflowBreakdown:
     workflow_id: str
     workflow_name: str
-    credits_used: int
+    amount_usd: Decimal                  # dollar amount per contract rate — not raw credits
     run_count: int
     period: str
 
@@ -379,4 +379,5 @@ Week 13:  ENG-35  — SOC 2 evidence collection (Narayana, needs ENG-33/34/41/42
 |---|---|---|
 | #7 | Suspension workflow on `invoice.payment_failed` — what exactly gets suspended (all runs, or just new reservations)? | Needs Finance input before ENG-33 impl |
 | #11 | Stripe confirmed | Locked |
-| New | ENG-42 owner | Needs assignment |
+| New-1 | ENG-42 owner | Needs assignment |
+| New-2 | Customer dashboard credit units: ENG-32 checklist says "credits used vs included" but Decision #1 says "credits are internal only." Should `PortalUsageSummary` expose credit counts (as the customer's purchased unit) or translate to dollar equivalents? `cap_pct` works either way; the raw count fields need a decision. | Needs product/Finance input before ENG-32 impl |
